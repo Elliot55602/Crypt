@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Color definitions
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+NC=$(tput sgr0)
+
+# Check if crypt.py exists in the same directory
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+PYTHON_SCRIPT="$SCRIPT_DIR/crypt.py"
+
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo "${RED}Error: crypt.py not found in $SCRIPT_DIR${NC}" >&2
+    exit 1
+fi
+
+# Check for required system dependencies
+check_system_deps() {
+    local missing=()
+    for cmd in python3 openssl tar; do
+        if ! command -v "$cmd" &>/dev/null; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo "${YELLOW}Missing system dependencies: ${missing[*]}${NC}" >&2
+        echo "${YELLOW}Attempting to install on Ubuntu/Debian/Kali...${NC}" >&2
+        if ! sudo apt update; then
+            echo "${RED}Failed to update package list${NC}" >&2
+            exit 1
+        fi
+        for cmd in "${missing[@]}"; do
+            if ! sudo apt install -y "$cmd"; then
+                echo "${RED}Failed to install $cmd${NC}" >&2
+                exit 1
+            fi
+        done
+        echo "${GREEN}System dependencies installed successfully${NC}" >&2
+    fi
+}
+
+# Main execution
+check_system_deps
+
+# Run the Python script with all provided arguments
+echo "${YELLOW}Running crypt.py...${NC}" >&2
+python3 "$PYTHON_SCRIPT" "$@"
+exit $?
